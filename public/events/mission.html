@@ -1,0 +1,1143 @@
+<div class="modal-content" id="missionDetailsVue">
+  <div class="modal-header">
+    <button type="button" class="btn btn-default" data-dismiss="modal" style="float:right;">Close</button>
+    <button v-if="!inEditMode && !hasSubmissionError && !isDeleted && !reopenSuccess" type="button" class="btn btn-success" style="float:right;margin-right:5px;" @click="inEditMode=true;submissionSuccess=false;" v-show="hasWritePermission">Edit</button>
+    <button v-if="inEditMode && !hasSubmissionError" type="button" class="btn btn-primary" style="float:right;margin-right:5px;" @click="saveMissionEdits()" >Save Edits</button>
+
+    <h4 class="modal-title" id="myModalLabelMession">MSF Past Response Details</h4>
+    <div id="missionModalOperatorCheck"></div>
+
+  </div>
+  <div class="modal-body" style="height:80vh;overflow-y:scroll;" >
+    <div class="row">
+      <div class="col-sm-12" style="text-align:right;">
+        </div>
+    </div>
+    <div class="msf-loader" v-if="isSubmitting">
+
+    </div>
+    <div class="alert alert-danger" v-if="hasSubmissionError">
+      {{submissionErrorText}}
+    </div>
+    <div class="alert alert-success" v-if="submissionSuccess">
+      Mission has been successfully updated.
+    </div>
+    <div class="alert alert-warning" v-if="isDeleted">
+      Mission has been successfully deleted.
+    </div>
+    <div class="alert alert-success" v-if="reopenSuccess">
+      The corresponding event has been successfully opened. Click <a :href="'/events/?eventId='+currentMissionEventId">here</a> to go event.
+    </div>
+    <div v-show="!isSubmitting && !hasSubmissionError && !isDeleted && !reopenSuccess"  class="row">
+      <div class="col-sm-5">
+        <div class="row">
+          <div class="col-sm-12">
+            <dl>
+              <dt>Event Name</dt>
+              <dd v-if="!inEditMode">{{mission.name}}</dd>
+              <dd v-else>
+                <input id="eventName" type="text" v-model="mission.name" class="form-control" placeholder="Event name" />
+              </dd>
+            </dl>
+            <dl>
+              <dt>Event Description</dt>
+              <dd v-if="!inEditMode">{{mission.description}}</dd>
+              <dd v-else>
+                <input id="eventDescription" type="text" v-model="mission.description" class="form-control" placeholder="Event description" />
+              </dd>
+            </dl>
+            <dl>
+              <dt>Precise location of the emergency</dt>
+              <dd>
+                <p class="help-block"  v-show="inEditMode">To change the location of the emergency, click on the map to replace the marker.</p>
+                <div id="eventMap1" style="width: 100%; height: 380px;"></div>
+              </dd>
+            </dl>
+            <dl>
+              <dt>Open Date of event</dt>
+              <dd v-if="!inEditMode"><span class="event-startDate">{{mission.event_datetime | formatDateOnly}}</span></dd>
+              <dd v-else>
+                <date-picker v-model="mission.event_datetime" :config="{format: 'YYYY-MM-DD'}" placeholder="Open date"></date-picker>
+              </dd>
+            </dl>
+            <dl>
+              <dt>Closure Date of event</dt>
+              <dd v-if="!inEditMode"><span class="event-finishDate">{{mission.event_datetime_closed | formatDateOnly }}</span></dd>
+              <dd v-else>
+                <date-picker v-model="mission.event_datetime_closed" :config="{format: 'YYYY-MM-DD'}" placeholder="Closure date"></date-picker>
+              </dd>
+            </dl>
+            <dl>
+              <dt>Status</dt>
+              <!-- on landing page  -->
+              <dd><span class="event-status">{{mission.event_status}}</span></dd>
+            </dl>
+            <dl>
+              <dt>Type of Emergency (nature)</dt>
+              <dd v-if="!inEditMode">{{ typeStr(mission.event_type || '',mission.sub_type) }}</dd>
+              <dd v-if="inEditMode">
+                <div v-for="(item, index) in eventTypes">
+                <input class ="newEventTypeBox" v-model="checkedTypes" type="checkbox" :index="index" :value="item.value" :id="'ev-type'+index"> <label class="eventBox" :for="'ev-type'+index"> {{item.text}} </label>
+                  <div v-if="item.subTypes && checkedTypes.indexOf(item.value) != -1" class="subTypes">
+                  <span v-if="item.subTypes" :id="item.value + index" v-for="(sub, index) in item.subTypes">
+                      <input class ="newSubEventTypeBox" v-model="checkedSubTypes" type="checkbox" :value="sub.value" :id="'ev-sub-'+(sub.text)+index" /> <label class="eventBox" :for="'ev-sub-'+(sub.text)+index"> {{sub.text}} &nbsp&nbsp </label>
+                      <br v-if="index % 4 == 1"/>
+                  </span>
+
+                  <span>
+                    <input class ="newSubEventTypeBox" v-model="otherFields[item.value].isSelected" type="checkbox" :value="'other_' + item.value" /> <label class="eventBox"> Other {{item.text}} &nbsp&nbsp </label>
+                    <input v-if="otherFields[item.value].isSelected" type="text" v-model="otherFields[item.value].description"  class="form-control" placeholder="(Specify)" />
+                  </span>
+                </div>
+              </div>
+                <div>
+                  <input class ="newEventTypeBox" v-model="otherFields.type.isSelected" type="checkbox" value="other_emergencies"> <label class="eventBox"> Others </label>
+                  <input v-if="otherFields.type.isSelected" type="text" class="form-control" v-model="otherFields.type.description" placeholder="(Specify)" />
+                </div>
+              </dd>
+            </dl>
+            <dl>
+              <dt>Date and time (local time) of the disaster</dt>
+              <dd v-if="!inEditMode">{{mission.event_local_time  | formatFullDate}}</dd>
+              <dd v-else>
+                <date-picker v-model="mission.event_local_time" ></date-picker>
+              </dd>
+            </dl>
+            <dl>
+              <dt>Mission Contact Person</dt>
+              <section v-if="!inEditMode">
+                <dd>{{mission.incharge_position}}</dd>
+                <dd>{{mission.incharge_name}}</dd>
+                <dd>Date of arrival: {{mission.mission_contact_person.arrival_time  | formatFullDate}}</dd>
+                <dd>Date of departure: {{mission.mission_contact_person.departure_time | formatFullDate}}</dd>
+              </section>
+              <section v-else>
+                <dd class="padding-bottom">
+                  <input type="text" class="form-control" v-model="mission.incharge_position" placeholder="Position" />
+                </dd>
+                <dd class="padding-bottom">
+                  <input type="text" class="form-control" v-model="mission.incharge_name" placeholder="Name" />
+                </dd>
+                <dd class="padding-bottom">
+                  <date-picker v-model="mission.mission_contact_person.arrival_time" placeholder="Arrival time" :config="dateTimeConfig" ></date-picker>
+                </dd>
+                <dd class="padding-bottom">
+                  <date-picker v-model="mission.mission_contact_person.departure_time" placeholder="Departure time" :config="dateTimeConfig"></date-picker>
+                </dd>
+              </section>
+
+            </dl>
+            <dl>
+              <dt>Main results of the explo-mission</dt>
+              <dd v-if="!inEditMode">{{mission.exploratory_details}}</dd>
+              <dd v-else>
+                <textarea v-model.trim="mission.exploratory_details" placeholder="Main results" class="form-control"></textarea>
+              </dd>
+            </dl>
+            <dl>
+              <dt>Analysis of severity</dt>
+              <dd v-if="!inEditMode">{{mission.severity}}</dd>
+              <dd v-else class="padding-bottom">
+                <textarea v-model.trim="mission.severity" placeholder="Severity description" class="form-control"></textarea>
+              </dd>
+            </dl>
+            <dl>
+              <dt>Security information</dt>
+              <dd v-if="!inEditMode">{{mission.security_details}}</dd>
+              <dd v-else>
+                <textarea v-model.trim="mission.security_details" placeholder="Security details" class="form-control"></textarea>
+              </dd>
+            </dl>
+            <dl>
+              <dt>ID link - SharePoint</dt>
+              <dd v-if="!inEditMode">
+                <a class="event-idLinkSharePoint" :href="mission.sharepoint_link" target="_blank">{{mission.sharepoint_link}}</a>
+              </dd>
+              <dd v-else>
+                <input type="text" class="form-control" v-model="mission.sharepoint_link" placeholder="SharePoint Link" />
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-7">
+        <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+          <div class="panel panel-default">
+            <div class="panel-heading" role="tab" id="headingTwo">
+              <h4 class="panel-title">
+                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo3" aria-expanded="true" aria-controls="collapseTwo3">
+                  MSF Response
+                </a>
+              </h4>
+            </div>
+            <div id="collapseTwo3" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingTwo">
+              <div class="panel-body">
+                <dl>
+                  <dt>MSF response / type of programmes</dt>
+                  <section v-if="!inEditMode">
+                    <dd><b>{{mission.msf_response}}</b></dd>
+                    <dd>{{mission.msf_response_types_of_programmes.toString() | relaceUnderscore}}</dd>
+                  </section>
+                  <section v-else>
+                    <dd>
+                      <div v-for="item in msfTypeOfProgrammes" class="type-of-programmes">
+                        <label>
+                          <input type="checkbox" :value="item.value" v-model="mission.msf_response_types_of_programmes" /> {{ item.text }}
+                        </label>
+                      </div>
+                    </dd>
+                    <dd>
+                      <textarea v-model="mission.msf_response" placeholder="MSF response" class="form-control"></textarea>
+                    </dd>
+                  </section>
+                </dl>
+                <dl>
+                  <dt>Start Date of the MSF response</dt>
+                  <dd v-if="!inEditMode">{{ mission.start_date_msf_response | formatDateOnly}}</dd>
+                  <dd v-else>
+                    <date-picker v-model="mission.start_date_msf_response" :config="{format: 'YYYY-MM-DD'}" placeholder="Start date"></date-picker>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>End date of MSF response</dt>
+                  <dd v-if="!inEditMode">{{mission.end_date_msf_response | formatDateOnly}}</dd>
+                  <dd v-else>
+                    <date-picker v-model="mission.end_date_msf_response" :config="{format: 'YYYY-MM-DD'}" placeholder="End date"></date-picker>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>Location of MSF response</dt>
+
+                  <dd>
+                    <p class="help-block"  v-show="inEditMode">To change the location of the MSF response, click on the map to replace the marker.</p>
+                    <div id="msfResponseMap1" style="width: 100%; height: 380px;"></div>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>Operational Center</dt>
+                  <dd v-if="!inEditMode">{{mission.msf_response_operational_centers.toString() | relaceUnderscore}}</dd>
+                  <dd v-else>
+                    <div v-for="item in msfOperationalCenters" class="operational-centers">
+                      <label>
+                        <input type="checkbox" :value="item" v-model="mission.msf_response_operational_centers" /> {{ item }}
+                      </label>
+                    </div>
+                  </dd>
+                </dl>
+                <dl>
+                  <section v-if="!inEditMode">
+                    <dt>Medical material</dt>
+                    <dd>{{mission.msf_response_medical_material.toString() | relaceUnderscore}}</dd>
+                    <dd>Total: {{mission.msf_response_medical_material_total}}</dd>
+                    <dd>Date of arrival: {{mission.msf_response_medical_material_date_arrival | formatDateOnly }}</dd>
+                  </section>
+                  <section v-else>
+                    <div class="row">
+                      <div class="col-sm-5">
+                        <dl>
+                          <dt>Medical material:</dt>
+                          <dd>
+                            <div v-for="item in msfMedicalMaterials" class="operational-centers">
+                              <label>
+                                <input type="checkbox" :value="item" v-model="mission.msf_response_medical_material" /> {{ item }}
+                              </label>
+                            </div>
+                          </dd>
+                        </dl>
+                      </div>
+                      <div class="col-sm-3">
+                        <dl>
+                          <dt>Total</dt>
+                          <dd>
+                            <input type="number" v-model.number="mission.msf_response_medical_material_total" class="form-control" placeholder="Exact number of supplies" />
+                          </dd>
+                        </dl>
+                      </div>
+                      <div class="col-sm-4">
+                        <dl>
+                          <dt>Date of arrival</dt>
+                          <dd>
+                            <date-picker v-model="mission.msf_response_medical_material_date_arrival" :config="{format: 'YYYY-MM-DD'}" placeholder="Date of arrival"></date-picker>
+                          </dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </section>
+                </dl>
+                <dl>
+                  <section v-if="!inEditMode">
+                    <dt>Non medical material</dt>
+                    <dd>{{mission.msf_response_non_medical_material.toString() | relaceUnderscore}}</dd>
+                    <dd>Total: {{mission.msf_response_non_medical_material_total}}</dd>
+                    <dd>Date of arrival: {{mission.msf_response_non_medical_material_date_arrival | formatDateOnly }}</dd>
+                  </section>
+                  <section v-else>
+                    <div class="row">
+                      <div class="col-sm-5">
+                        <dl>
+                          <dt>Non Medical material:</dt>
+                          <dd>
+                            <div v-for="item in msfNonMedicalMaterials" class="operational-centers">
+                              <label>
+                                <input type="checkbox" :value="item" v-model="mission.msf_response_non_medical_material" /> {{ item }}
+                              </label>
+                            </div>
+                          </dd>
+                        </dl>
+                      </div>
+                      <div class="col-sm-3">
+                        <dl>
+                          <dt>Total</dt>
+                          <dd>
+                            <input type="number" v-model.number="mission.msf_response_non_medical_material_total" class="form-control" placeholder="Exact number of supplies" />
+                          </dd>
+                        </dl>
+                      </div>
+                      <div class="col-sm-4">
+                        <dl>
+                          <dt>Date of arrival</dt>
+                          <dd>
+                            <date-picker v-model="mission.msf_response_non_medical_material_date_arrival" :config="{format: 'YYYY-MM-DD'}" placeholder="Date of arrival"></date-picker>
+                          </dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </section>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="panel panel-default">
+            <div class="panel-heading" role="tab" id="headingThree">
+              <h4 class="panel-title">
+                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseThree3" aria-expanded="false" aria-controls="collapseThree3">
+                  External Capacity
+                </a>
+              </h4>
+            </div>
+            <div id="collapseThree3" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
+              <div class="panel-body">
+                <dl>
+                  <dt>Analysis of capacity on the ground</dt>
+                  <dd v-if="!inEditMode">{{mission.ext_capacity_type_in_ground}}</dd>
+                  <dd v-else>
+                    <label>
+                      <input type="radio" value="medical" v-model="mission.ext_capacity_type_in_ground" /> Medical
+                    </label>
+                    <label>
+                      <input type="radio" value="non_medical" v-model="mission.ext_capacity_type_in_ground" /> Non-Medical
+                    </label>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt></dt>
+                  <section v-if="!inEditMode">
+                    <dd>Government capacity: {{mission.capacity}}</dd>
+                    <dd>Humanitarian: {{mission.ext_capacity_by_humanitarian}}</dd>
+                    <dd>Action plan: {{mission.ext_capacity_action_plan}}</dd>
+                    <dd>Who: {{mission.ext_capacity_who}}</dd>
+                  </section>
+                  <section v-else>
+                    <dd class="padding-bottom">
+                      <textarea v-model.trim="mission.capacity" placeholder="Government capacity" class="form-control"></textarea>
+                    </dd>
+                    <dd class="padding-bottom">
+                      <textarea v-model.trim="mission.ext_capacity_by_humanitarian" placeholder="Humanitarian" class="form-control"></textarea>
+                    </dd>
+                    <dd class="padding-bottom">
+                      <textarea v-model.trim="mission.ext_capacity_action_plan" placeholder="Action plan" class="form-control"></textarea>
+                    </dd>
+                    <dd class="padding-bottom">
+                      <input type="text" v-model="mission.ext_capacity_who" class="form-control" placeholder="Who" />
+                    </dd>
+
+                  </section>
+                </dl>
+                <h5>Other organizations, partners involved:</h5>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>NGO</th>
+                      <th>Deployment</th>
+                      <th>Arrival</th>
+                    </tr>
+                  </thead>
+                  <tbody v-if="!inEditMode">
+                    <tr v-for="(item, index) in mission.ext_other_organizations">
+                      <td>
+                        {{item.name}}
+                      </td>
+                      <td>
+                        {{item.deployment}}
+                      </td>
+                      <td>
+                        {{item.arrival_date | formatFullDate}}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tbody v-else>
+                    <tr v-for="(item, index) in mission.ext_other_organizations">
+                      <td>
+                        <input type="text" class="form-control" v-model="item.name" />
+                      </td>
+                      <td>
+                        <input type="text" class="form-control" v-model.number="item.deployment" />
+                      </td>
+                      <td style="position:relative;">
+                        <date-picker v-model="item.arrival_date" :config="{format: 'YYYY-MM-DD'}" placeholder="Date of arrival"></date-picker>
+                      </td>
+                      <td>
+                        <button type="button" class="btn btn-xs btn-danger" v-on:click="removeOtherOrg(index)">X</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="4">
+                        <button type="button" class="btn btn-xs btn-success" v-on:click="addOtherOrg">Add more organization</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="panel panel-default">
+            <div class="panel-heading" role="tab" id="headingFour">
+              <h4 class="panel-title">
+                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseFour3" aria-expanded="false" aria-controls="collapseFour3">
+                  Key Figures
+                </a>
+              </h4>
+            </div>
+            <div id="collapseFour3" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingFour">
+              <div class="panel-body">
+                <dl>
+                  <dt>Figures</dt>
+                  <dd v-if="!inEditMode">
+                    <div v-for="(item, index) in mission.keyMSFFigures">
+                      <div class="row">
+                        <div class="col-sm-12">
+                          <input type="range" disabled min="1" max="10" step="1" v-model="item.range" v-on:input="updateFigureValue(item, index)" />
+                        </div>
+                        <div class="col-sm-12">
+                          <label>{{ item.category | relaceUnderscore }}: {{ item.value | formatedNumber }}</label>
+                          <div v-if="item.category === 'others' || item.category === 'measles_or_others_(be_specify)_vaccinations'">
+                            {{item.description}}
+                          </div>
+                        </div>
+                      </div>
+                      <hr/>
+                    </div>
+                  </dd>
+                  <dd v-else>
+                    <div class="row">
+                      <div class="col-sm-6">
+                        <div v-if="mission.keyMSFFigures.length === 0">
+                          <div class="well">No MSF Figure yet.</div>
+                        </div>
+                        <div class="clearfix">&nbsp;</div>
+                        <div v-for="(item, index) in mission.keyMSFFigures">
+                          <div class="row">
+                            <div class="col-sm-2">
+                              <button class="btn btn-xs btn-danger" @click="removeMSFfigure(item, index)">X</button>
+                            </div>
+                            <div class="col-sm-10">
+                              <input type="range" min="1" max="10" step="1" v-model="item.range" v-on:input="updateFigureValue(item, index)" />
+                            </div>
+                            <div class="col-sm-12">
+                              <label>{{ item.category | relaceUnderscore }}: {{ item.value | formatedNumber }}</label>
+                              <div v-if="item.category === 'others' || item.category === 'measles_or_others_(be_specify)_vaccinations'">
+                                <input type="text" v-model="item.description" class="form-control" placeholder="Please Specify" />
+                              </div>
+                            </div>
+                          </div>
+                          <hr/>
+                        </div>
+                      </div>
+                      <div class="col-sm-6">
+                        <div v-for="(item, index) in keyMSFFigures">
+                          <a href="#" @click="addSelectedMSFfigures(item)"><i class="glyphicon glyphicon-ok" /> {{ item | relaceUnderscore }}</a>
+                        </div>
+                      </div>
+                    </div>
+                  </dd>
+                </dl>
+                <section v-if="!inEditMode">
+                <dl>
+                  <dt>Population in total for zone impacted</dt>
+                  <dd>{{mission.population_total}}</dd>
+                  <dd>{{mission.population_total_description}}</dd>
+                </dl>
+                <dl>
+                  <dt>Population affected</dt>
+                  <dd>{{mission.population_affected}}</dd>
+                  <dd>{{mission.population_affected_description}}</dd>
+                </dl>
+                <dl>
+                  <dt>Percentage of people affected</dt>
+                  <dd>{{mission.percentage_population_affected}}%</dd>
+                </dl>
+              </section>
+              <section v-else>
+                  <dl>
+                    <dt>Population in total for zone impacted</dt>
+                    <dd>
+                      <div class="row">
+                        <div class="col-sm-4">
+                          <input type="number" class="form-control" v-model.number="mission.population_total" v-on:change="calculatePercentagePeopleAffected" placeholder="Total population" />
+                        </div>
+                        <div class="col-sm-8">
+                          <textarea v-model.trim="mission.population_total_description" placeholder="Description" class="form-control"></textarea>
+                        </div>
+                      </div>
+                    </dd>
+                  </dl>
+                  <dl>
+                    <dt>Population affected</dt>
+                    <dd>
+                      <div class="row">
+                        <div class="col-sm-4">
+                          <input type="number" class="form-control col-sm-3" v-model.number="mission.population_affected" v-on:change="calculatePercentagePeopleAffected" placeholder="Affected population" />
+                        </div>
+                        <div class="col-sm-8">
+                          <textarea v-model.trim="mission.population_affected_description" placeholder="Description" class="form-control"></textarea>
+                        </div>
+                      </div>
+                    </dd>
+                  </dl>
+                  <dl>
+                    <dt>Percentage of people affected</dt>
+                    <dd>
+                      <div class="row">
+                        <div class="col-xs-4">
+                          <input type="number" class="form-control col-sm-3" v-model.number="mission.percentage_population_affected" placeholder="Affected population" />
+                        </div>
+                      </div>
+                    </dd>
+                  </dl>
+              </section>
+              </div>
+            </div>
+          </div>
+          <div class="panel panel-default">
+            <div class="panel-heading" role="tab" id="headingFive">
+              <h4 class="panel-title">
+                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseFive3" aria-expanded="false" aria-controls="collapseFive3">
+                  MSF Resources
+                </a>
+              </h4>
+            </div>
+            <div id="collapseFive3" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingFive">
+              <div class="panel-body">
+                <dl>
+                  <dt>Staff list — human resources</dt>
+                  <dd v-if="!inEditMode">{{mission.msf_resource_staff_list}}</dd>
+                  <dd v-else>
+                    <textarea v-model.trim="mission.msf_resource_staff_list" placeholder="Contact(s)" class="form-control"></textarea>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>Expatriate</dt>
+                  <dd v-if="!inEditMode">{{mission.msf_resource_staff_expatriate}}</dd>
+                  <dd v-else>
+                    <textarea v-model.trim="mission.msf_resource_staff_expatriate" placeholder="Contact(s)" class="form-control"></textarea>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>National staff</dt>
+                  <dd v-if="!inEditMode">{{mission.msf_resource_staff_national}}</dd>
+                  <dd v-else>
+                    <textarea v-model.trim="mission.msf_resource_staff_national" placeholder="Contact(s)" class="form-control"></textarea>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>When were they hired by MSF? / When do they arrive on the ground?</dt>
+                  <dd v-if="!inEditMode">{{mission.msf_resource_hired_date | formatFullDate }} arrive on {{mission.msf_resource_arrive_to_ground | formatFullDate}}</dd>
+                  <dd v-if="inEditMode">
+                    <date-picker v-model="mission.msf_resource_hired_date" :config="{format: 'YYYY-MM-DD'}" placeholder="Hired date"></date-picker>
+                  </dd>
+                  <dd v-if="inEditMode">
+                    <date-picker v-model="mission.msf_resource_arrive_to_ground" :config="{format: 'YYYY-MM-DD'}" placeholder="Arrive to ground date"></date-picker>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>Visa requirement</dt>
+                  <section v-if="!inEditMode" >
+                    <section v-for="nat in mission.msf_resource_visa_requirement.nationality">
+                      <dd>Nationality: {{nat.name}}</dd>
+                      <dd>Visa required: {{nat.is_required}}</dd>
+                    </section>
+                  <dd>{{mission.msf_resource_visa_requirement.description}}</dd>
+                </section>
+                <section v-else>
+                  <dd>
+                    <label>Nationality</label>
+                    <div style="display:block;" v-for="(nat,ind) in mission.msf_resource_visa_requirement.nationality">
+                       <country-select :options="countryParams" v-model="nat" @input="countryChanged($event,ind)"></country-select>
+
+                         <label>Required:</label>
+                         <label>
+                           <input type="radio" :name="'nationalityRequired_'+ind" v-model="nat.is_required" value="yes"> Yes
+                         </label>
+                         <label>
+                           <input type="radio" :name="'nationalityRequired_'+ind" v-model="nat.is_required" value="no"> No
+                         </label>
+
+                       <button type="button" class="btn btn-danger btn-xs" style="float:right;" @click="removeNationalityField(ind)">x</button>
+                    </div>
+                    <button type="button" class="btn btn-success btn-xs" @click="addNationalityField">Add another nationality</button>
+                  </dd>
+                </section>
+                </dl>
+                <dl>
+                  <dt>Budget</dt>
+                  <dd>
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th>Amount</th>
+                          <th>From who</th>
+                        </tr>
+                      </thead>
+                      <tbody v-if="!inEditMode">
+                        <tr v-for="(item, index) in mission.msf_resource_budget">
+                          <td>
+                            {{item.amount}}
+                          </td>
+                          <td>
+                            {{item.from_who}}
+                          </td>
+                        </tr>
+                      </tbody>
+                      <tbody v-else>
+                        <tr v-for="(item, index) in mission.msf_resource_budget">
+                          <td>
+                            <input type="text" class="form-control" v-model="item.amount" />
+                          </td>
+                          <td>
+                            <input type="text" class="form-control" v-model.number="item.from_who" />
+                          </td>
+                          <td>
+                            <button type="button" class="btn btn-xs btn-danger" v-on:click="removeResourceBudget(index)">X</button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colspan="4">
+                            <button type="button" class="btn btn-xs btn-success" v-on:click="addResourceBudget">Add more budget</button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>Institutional Donors</dt>
+                  <dd v-if="!inEditMode">{{mission.msf_resource_institutional_donors}}</dd>
+                  <dd v-else>
+                    <textarea v-model.trim="mission.msf_resource_institutional_donors" placeholder="Donors" class="form-control"></textarea>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="panel panel-default">
+            <div class="panel-heading" role="tab" id="headingSix">
+              <h4 class="panel-title">
+                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseSix3" aria-expanded="false" aria-controls="collapseSix3">
+                  Reflection and comments
+                </a>
+              </h4>
+            </div>
+            <div id="collapseSix3" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingSix">
+              <div class="panel-body">
+                <dl>
+                  <dt>Practical Details / Recommendations</dt>
+                  <dd v-if="!inEditMode">{{mission.msf_ref_com_practical_details_recomm}}</dd>
+                  <dd v-else>
+                    <textarea v-model.trim="mission.msf_ref_com_practical_details_recomm" placeholder="Description" class="form-control"></textarea>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>Reflection / Comments on intervention</dt>
+                  <dd v-if="!inEditMode">{{mission.msf_ref_com_reflection_comments}}</dd>
+                  <dd v-else>
+                    <textarea v-model.trim="mission.msf_ref_com_reflection_comments" placeholder="Description" class="form-control"></textarea>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button v-if="!inEditMode && !isDeleted && !reopenSuccess" v-show="hasWritePermission" type="button" class="btn btn-warning"  @click="confirmReActiveEvent" ><span class="glyphicon glyphicon-repeat"></span> Re-open Event</button>
+    <button v-if="!inEditMode && !hasSubmissionError && !isDeleted && !reopenSuccess" v-show="hasWritePermission" type="button" class="btn btn-danger"  @click="confirmDeleteMission" ><span class="glyphicon glyphicon-remove"></span> Delete mission</button>
+  </div>
+</div>
+
+<script type="text/javascript">
+Vue.component("date-picker", VueBootstrapDatetimePicker.default);
+
+Vue.component('country-select', {
+  props: ['options', 'value'],
+  template: '<input  type="text" class="form-control input-sm" >',
+  mounted: function () {
+    operatorCheck();
+    var vmc = this
+    $(this.$el)
+      .countrySelect(this.options)
+      .countrySelect("selectCountry", this.value.iso2)
+      .trigger('change')
+      // emit event on change.
+      .on('change', function () {
+        var country = $(this).countrySelect("getSelectedCountryData");
+        vmc.$emit('input', country)
+      })
+  },
+  watch: {
+    value: function (value) {
+      // update value
+      $(this.$el).countrySelect("selectCountry", value.iso2);
+    },
+    options: function (options) {
+      $(this.$el).countrySelect(options);
+    }
+  },
+  destroyed: function () {
+    $(this.$el).off().countrySelect('destroy')
+  }
+});
+
+Vue.filter('formatDateOnly', function(value,storedFormat) {
+  if (value) {
+    var d=moment(value);
+    return (d.isValid() ? d.format(DATE_DISPLAY_FORMAT) : (value + ' (invalid date format)'));
+  }
+  else{
+    return '';
+  }
+});
+
+Vue.filter('formatFullDate', function(value,storedFormat) {
+  if (value) {
+    //return (new Date(value)).toLocaleString().replace(/:\d{2}$/,'');
+   var d= (storedFormat ? moment(value,storedFormat) : moment(value) );
+   return (d.isValid() ? d.format(DATETIME_DISPLAY_FORMAT) : (value + ' (invalid date format)'));
+  } else {
+    return "";
+  }
+});
+
+Vue.filter('formatedNumber', function(value) {
+  return value.toString().replace(/,/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+});
+
+Vue.filter('relaceUnderscore', function(value) {
+  return replaceUnderscore(value);
+});
+
+var replaceUnderscore = function(value) {
+  function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+  value = capitalizeFirstLetter(value);
+  value = value.replace(/__/g, "-");
+  return value.replace(/_/g, " ");
+}
+
+var eventMap1,msfResponseMap1;
+
+
+var vmInstance = new Vue({
+  el: "#missionDetailsVue",
+  data: {
+    mission: $.extend(true,{},defaultEvent.metadata, missionData),
+    msfTypeOfProgrammes: msfTypeOfProgrammes,
+    msfOperationalCenters: msfOperationalCenters,
+    keyMSFFigures: keyMSFFigures,
+    inEditMode:false,
+    isSubmitting:false,
+    hasSubmissionError:false,
+    submissionSuccess:false,
+    submissionErrorText: '',
+    currentMissionId: currentMissionId,
+    currentMissionEventId: currentMissionEventId,
+    statuses: statuses,
+    eventTypes: eventTypes,
+    checkedTypes: [],
+    checkedSubTypes: [],
+    invalidTypesSelection: false,
+    otherFields: {
+        type: {
+            isSelected: false,
+            description: ''
+        },
+        disease_outbreak: {
+            isSelected: false,
+            description: ''
+        },
+        natural_disaster: {
+            isSelected: false,
+            description: ''
+        }
+    },
+    dateTimeConfig: {
+      format: DATETIME_DISPLAY_FORMAT
+    },
+    isDeleted:false,
+    hasWritePermission: hasWritePermission,
+    reopenSuccess: false
+  },
+  methods: {
+    typeStr:typeStr,
+    confirmDeleteMission:function(){
+      var vm=this;
+      if (confirm('Are you sure you want to permanently delete this mission? \nWARNING: This action cannot be undone'))
+      {
+        vm.isSubmitting=true;
+        $.ajax({
+          type: "DELETE",
+          url: "/api/missions/" + vm.currentMissionId,
+          contentType: 'application/json'
+        }).done(function(data, textStatus, req) {
+          vm.isSubmitting=false;
+          vm.isDeleted=true;
+          thGetMissions(null);
+          console.log(data);
+
+
+        }).fail(function(err) {
+          vm.isSubmitting=false;
+          vm.isDeleted=false;
+          vm.hasSubmissionError=true;
+          vm.submissionErrorText='An error occured when trying to delete the mission.'
+
+          if (err.responseText.includes('expired')) {
+            alert("session expired");
+          }
+        });
+
+      }
+    },
+    confirmReActiveEvent:function(){
+      var vm=this;
+      if (!(vm.currentMissionEventId))
+      {
+        alert('There is no event associated with this past mission. For re-opening a specific event contact administrators.');
+        return;
+      }
+      if (confirm('Are you sure you want to re-open the orginal event? \nWARNING: This will discard all mission edits and will delete the current mission.'))
+      {
+        vm.isSubmitting=true;
+        vm.reopenSuccess=false;
+        var body={
+          eventId: vm.currentMissionEventId
+        }
+        $.ajax({
+          type: "POST",
+          url: "/api/missions/eventactivate/" + vm.currentMissionId,
+          data: JSON.stringify(body),
+          contentType: 'application/json'
+        }).done(function(data, textStatus, req) {
+          vm.isSubmitting=false;
+          vm.reopenSuccess=true;
+          thGetMissions(null);
+          console.log(data);
+
+
+        }).fail(function(err) {
+          vm.isSubmitting=false;
+          vm.hasSubmissionError=true;
+          vm.submissionErrorText='An error occured when trying to reactivate the mission.'
+
+          if (err.responseText.includes('expired')) {
+            alert("session expired");
+          }
+        });
+
+      }
+    },
+    confirmLocationChange: function(){
+      var mapCenter=eventMap1.getCenter();
+      missionCoordinates=[mapCenter.lng, mapCenter.lat];
+      eventMap1.removeLayer(eventMap1.eventMarker);
+      eventMap1.eventMarker = L.marker([missionCoordinates[1], missionCoordinates[0]]).addTo(eventMap1);
+    },
+    confirmResponseLocationChange:  function(){
+      var mapCenter=msfResponseMap1.getCenter();
+      this.mission.msf_response_location.coordinates=[mapCenter.lng, mapCenter.lat];
+      msfResponseMap1.removeLayer(msfResponseMap1.msfResponseMarker);
+      msfResponseMap1.msfResponseMarker = L.marker([this.mission.msf_response_location.coordinates[1], this.mission.msf_response_location.coordinates[0]]).addTo(msfResponseMap1);
+    },
+    lintTypes: function(){
+
+        var tmpEventWithSubTypes = {};
+        for(var i3= 0; i3 < this.eventTypes.length; i3++){
+            if(eventTypes[i3].subTypes){
+                var tmpSubTypes = eventTypes[i3].subTypes.map(function(el){return el.value;});
+                tmpEventWithSubTypes[eventTypes[i3].value] = tmpSubTypes;
+            }
+        }
+
+        var cleanSubTypes = [];
+        for(var i4=0; i4<this.checkedTypes.length; i4++){
+            var tmpType = tmpEventWithSubTypes[this.checkedTypes[i4]];
+            if(tmpType){
+                for(var j=0; j<this.checkedSubTypes.length; j++){
+                    if(tmpType.indexOf(this.checkedSubTypes[j]) > -1){
+                        cleanSubTypes.push(this.checkedSubTypes[j]);
+                    }
+                }
+            }
+        }
+        this.checkedSubTypes = cleanSubTypes;
+    },
+    lintSubTypesSelected: function(){
+      var vm=this;
+        var tmpType = vm.mission.event_type || '';
+        var tmpSubType = vm.mission.sub_type;
+        if ((tmpType.includes('natural_disaster') || tmpType.includes('disease_outbreak')) && tmpSubType == '') {
+            alert('ensure subtype(s) is/are selected');
+            this.invalidTypesSelection = true;
+        }else{
+            this.invalidTypesSelection = false;
+        }
+    },
+    lintOtherFields: function(){
+        var emptyFields = [];
+
+        for(var key in this.otherFields){
+            var description = this.otherFields[key].description;
+
+            if(this.otherFields[key].isSelected){
+                if( _.isEmpty(description) && (this.checkedTypes.indexOf(key) != -1 || key == 'type')){ // to be sure that main type was selected
+                    emptyFields.push(key.replace('_', ' '));
+                }else if(this.checkedTypes.indexOf(key) != -1){
+                    this.checkedSubTypes.push('other_'+key+ ': '+ description);
+                }else if(key == 'type'){
+                    var index = _.findIndex(this.checkedTypes, function(el){
+                        return el.indexOf('other:') != -1;
+                    });
+
+                    if(index != -1){
+                        this.checkedTypes[index] = 'other: '+ description;
+                    }else{
+                        this.checkedTypes.push('other: '+ description);
+                    }
+                }
+            }
+        }
+
+        if(emptyFields.length > 0 ){
+            alert(`Please enter description for other ${emptyFields.join(', ')}`);
+            this.invalidTypesSelection = true;
+        }else{
+            this.invalidTypesSelection = false;
+        }
+    },
+    saveMissionEdits: function(){
+      var vm=this;
+
+
+
+      vm.lintTypes(); // make sure if type is unselected, subtype is removed
+      vm.lintOtherFields();
+
+      vm.mission.event_type = vm.checkedTypes.join();
+      vm.mission.sub_type = vm.checkedSubTypes.join();
+
+      vm.lintSubTypesSelected();
+      if (vm.invalidTypesSelection)
+       return;
+
+      if ((vm.mission.sharepoint_link)&&(vm.mission.sharepoint_link.indexOf('https://') != 0))
+      {
+        alert('Please make sure the sharepoint link starts with https:// and try again. ');
+        return;
+      }
+      vm.isSubmitting=true;
+
+      var body={
+        status: vm.mission.event_status === 'complete' ? 'complete' : 'active',
+        metadata: vm.mission,
+        eventId:  null,
+        location:{
+          lat: missionCoordinates[1],
+          lng: missionCoordinates[0]
+        }
+      }
+      vm.inEditMode=false;
+      vm.submissionSuccess=false;
+      $.ajax({
+        type: "PUT",
+        url: "/api/missions/" + currentMissionId,
+        data: JSON.stringify(body),
+        contentType: 'application/json'
+      }).done(function(data, textStatus, req) {
+        vm.isSubmitting=false;
+        vm.hasSubmissionError=false;
+        vm.submissionSuccess=true;
+        thGetMissions(null);
+      }).fail(function(err) {
+        vm.isSubmitting=false;
+        vm.hasSubmissionError=true;
+        vm.submissionErrorText='Unsuccessful submission.'
+
+        if (err.responseText.includes('expired')) {
+
+          alert("session expired");
+        }
+      });
+    },
+    addOtherOrg() {
+      this.mission.ext_other_organizations.push({
+        name: null,
+        deployment: 0,
+        arrival_date: null,
+      });
+    },
+    removeOtherOrg(index) {
+      this.mission.ext_other_organizations.splice(index, 1);
+    },
+    updateFigureValue(item, i) {
+      this.mission.keyMSFFigures[i].value = Math.pow(10, item.range);
+    },
+    addSelectedMSFfigures(item) {
+      var newItem = { value: 0, range: 0, category: item, description: null };
+      if (!_.find(this.mission.keyMSFFigures, { category: item })) {
+        this.mission.keyMSFFigures.push(newItem);
+        var index = this.keyMSFFigures.indexOf(item);
+        if (index > -1) {
+          this.keyMSFFigures.splice(index, 1);
+        }
+      }
+    },
+    removeMSFfigure(item, index) {
+      this.keyMSFFigures.push(item.category);
+      this.mission.keyMSFFigures.splice(index, 1);
+    },
+    calculatePercentagePeopleAffected() {
+      var percentage = (this.mission.population_affected / this.mission.population_total) * 100;
+      this.mission.percentage_population_affected = percentage.toFixed(2);
+    },
+    removeNationalityField(index){
+      this.mission.msf_resource_visa_requirement.nationality.splice(index,1);
+
+    },
+    addNationalityField(){
+      this.mission.msf_resource_visa_requirement.nationality.push({
+          iso2: 'xx',
+          name: null,
+          is_required:true
+      });
+
+    },
+    countryChanged(country,ind) {
+      var vm=this;
+      var obj={
+        name:country.name,
+        iso2:country.iso2,
+        is_required: vm.mission.msf_resource_visa_requirement.nationality[ind].is_required
+      }
+      Vue.set(vm.mission.msf_resource_visa_requirement.nationality,ind, obj);
+    },
+    removeResourceBudget(index) {
+      this.mission.msf_resource_budget.splice(index, 1);
+    },
+    addResourceBudget() {
+      this.mission.msf_resource_budget.push({
+        amount: 0,
+        from_who: null,
+      });
+    }
+  },
+  mounted: function() {
+   var vm=this;
+
+   if ((vm.mission.startDate)&&(!(vm.mission.event_datetime)))
+   {
+     vm.mission.event_datetime=new moment(vm.mission.startDate,"DD/MM/YYYY");
+   }
+   if ((vm.mission.finishDate)&&(!(vm.mission.event_datetime_closed)))
+   {
+     vm.mission.event_datetime_closed=new moment(vm.mission.finishDate,"DD/MM/YYYY");
+   }
+
+   if (vm.mission.event_type) {
+       var currentTypes = vm.mission.event_type.split(',');
+       for(var t = 0; t < currentTypes.length; t++){
+           this.checkedTypes.push(currentTypes[t]);
+       }
+   }
+
+   if (vm.mission.sub_type) {
+       var currentSubTypes = vm.mission.sub_type.split(',');
+       for(var st = 0; st < currentSubTypes.length; st++){
+           this.checkedSubTypes.push(currentSubTypes[st]);
+       }
+   }
+
+
+    this.$nextTick(function() {
+      var eventDefaultLayer = 'https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v9/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoidG9tYXN1c2VyZ3JvdXAiLCJhIjoiY2o0cHBlM3lqMXpkdTJxcXN4bjV2aHl1aCJ9.AjzPLmfwY4MB4317m4GBNQ';
+      var eventDefaultLatLng = [missionCoordinates[1], missionCoordinates[0]];
+
+      /** << eventMap1 */
+      eventMap1 = L.map('eventMap1').setView(eventDefaultLatLng, 13);
+      L.tileLayer(eventDefaultLayer, {
+        minZoom: 0,
+        maxZoom: 18,
+        attribution: '© Mapbox © OpenStreetMap © DigitalGlobe',
+        id: 'mapbox.streets'
+      }).addTo(eventMap1);
+      eventMap1.eventMarker = L.marker(eventDefaultLatLng).addTo(eventMap1);
+
+      eventMap1.on('click', function(e){
+        if (vm.inEditMode)
+        {
+          var mapCenter=e.latlng;
+          missionCoordinates=[mapCenter.lng, mapCenter.lat];
+          eventMap1.removeLayer(eventMap1.eventMarker);
+          eventMap1.eventMarker = L.marker([missionCoordinates[1], missionCoordinates[0]]).addTo(eventMap1);
+        }
+      });
+      /** eventMap1 >> */
+
+
+
+      /** << msfResponseMap1 */
+      var msfResponseMarkerLatLng = eventDefaultLatLng;
+      if (!_.isEmpty(this.mission.msf_response_location.coordinates)) {
+        msfResponseMarkerLatLng = [this.mission.msf_response_location.coordinates[1], this.mission.msf_response_location.coordinates[0]];
+      }
+
+      msfResponseMap1 = L.map('msfResponseMap1').setView(msfResponseMarkerLatLng, 13);
+      L.tileLayer(eventDefaultLayer, {
+        attribution: '© Mapbox © OpenStreetMap © DigitalGlobe',
+        id: 'mapbox.streets'
+      }).addTo(msfResponseMap1);
+      msfResponseMap1.msfResponseMarker = L.marker(msfResponseMarkerLatLng).addTo(msfResponseMap1);
+
+      msfResponseMap1.on('click', function(e){
+        if (vm.inEditMode)
+        {
+          var mapCenter=e.latlng;
+          vm.mission.msf_response_location.coordinates=[mapCenter.lng, mapCenter.lat];
+          msfResponseMap1.removeLayer(msfResponseMap1.msfResponseMarker);
+          msfResponseMap1.msfResponseMarker = L.marker([vm.mission.msf_response_location.coordinates[1], vm.mission.msf_response_location.coordinates[0]]).addTo(msfResponseMap1);
+        }
+      });
+
+      /** msfResponseMap1 >> */
+
+
+
+      setTimeout(function() {
+        eventMap1.invalidateSize();
+        msfResponseMap1.invalidateSize();
+      }, 300);
+    });
+  },
+});
+</script>

@@ -1,0 +1,144 @@
+
+#inputSeverityScale label {
+    position: absolute;
+    width: 20px;
+    margin-left: -10px;
+    text-align: center;
+    margin-top: 20px;
+}
+.ui-slider-horizontal{
+  height: 5px !important;
+}
+.ui-slider-horizontal .ui-slider-handle{
+  top: -.5em !important;
+  border-radius: 8px !important;
+}
+.inputSeveritySlider{
+  position: relative;
+  width: 50%;
+  float: right;
+  margin: 2em;
+}
+.inputSeveritySlider label{
+  position: absolute;
+  width: 20px;
+  margin-left: -10px;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 11px;
+}
+.severity-wrapper .label{
+  color: #000;
+}
+.severity-wrapper textarea{
+  font-size: 11px;
+  height: 115px;
+}
+/* below is not necessary, just for style */
+#inputSeverityScale {
+    width: 50%;
+    height: auto;
+    margin: 2em auto;
+}
+
+.datepicker-container{
+  position: relative;
+}
+
+.map-container{
+  position: relative;
+  width: 100%;
+  height: 380px;
+}
+
+.full-width{
+  width: 100%;
+}
+
+.subTypes{
+  margin-left: 20px;
+}
+
+span.remove{
+  position: absolute;
+  top: -2px;
+  right: 5px;
+  font-stretch: ultra-expanded;
+  cursor: pointer;
+  color: gray;
+  font-weight: 300;
+  font-size: 20px;
+}
+
+span.remove:hover{
+  color: #000;
+}
+.tags{
+  border: 1px solid transparent;
+  /* margin: .5em; */
+  padding: 5px;
+  /* padding: 3px 18px 3px 8px; */
+  /* border-radius: 4px; */
+  /* border: 1px solid #ccc; */
+  position: relative;
+  box-sizing: border-box;
+  /* display: inline-block; */
+
+  width: 100%;
+  margin-bottom: 2em;
+}
+
+.close-box{
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+.table-container{
+  padding: 0;
+}
+#notificationEditor div,
+#notificationEditor textarea{
+    display: inline-block;
+    width: 49%;
+    height: 40vh;
+    vertical-align: top;
+    box-sizing: border-box;
+    padding: 0 20px;
+}
+
+#notificationEditor textarea{
+    border: none;
+    border-right: 1px solid #ccc;
+    resize: none;
+    outline: none;
+    background-color: #f6f6f6;
+    padding: 20px;
+}
+
+#markdownPreview {
+    overflow: scroll;
+}
+
+#mdExplained{
+    cursor: pointer;
+}
+#mdExplained span{
+    font-weight: bold;
+}
+
+
+span.highlight{
+    color: red;
+    background: #fcf8e3;
+}
+
+div.highlight{
+    background: #fcf8e3;
+}
+
+.highlight input{
+    background: #fcf8e3
+}
+
+.highlight textarea{
+    background: #fcf8e3
+}

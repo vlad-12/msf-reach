@@ -1,0 +1,160 @@
+body {
+  padding-top: 0px;
+  padding-bottom: 40px;
+
+}
+
+#wrapper .container{
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,.3);
+    display: inherit;
+}
+#wrapper:before {
+    opacity: 0.7;
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 100%;
+    height: 100%;
+}
+
+#wrapper{
+    background-image: url('/resources/images/background.jpg');
+    background-size: cover;
+    height: 100vh;
+}
+
+nav a{
+    float: right;
+    background: white;
+    color: #f00;
+    text-transform: uppercase;
+    font-size: 20px;
+}
+
+.infolink:before
+{
+    content: '?';
+    display: inline-block;
+    font-family: sans-serif;
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    line-height: 1.8ex;
+    border-radius: 1.2ex;
+    margin-right: 4px;
+    padding: 1px;
+    color: blue;
+    background: white;
+    border: 1px solid blue;
+    text-decoration: none;
+}
+
+.infolink:hover:before
+{
+    color: white;
+    background: blue;
+    border-color: white;
+    text-decoration: none;
+}
+
+.container{
+  display: table-cell;
+  vertical-align: middle;
+}
+.form-signin {
+  max-width: 330px;
+  padding: 15px;
+  margin:  auto;
+  padding-top: 25%;
+}
+.form-signin .form-signin-heading,
+.form-signin .checkbox {
+  margin-bottom: 10px;
+  color:white;
+}
+.form-signin .checkbox {
+  font-weight: normal;
+}
+.form-signin .form-control {
+  position: relative;
+  height: auto;
+  -webkit-box-sizing: border-box;
+     -moz-box-sizing: border-box;
+          box-sizing: border-box;
+  padding: 10px;
+  font-size: 16px;
+}
+.form-signin .form-control:focus {
+  z-index: 2;
+}
+.form-signin input[type="email"] {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.form-signin input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.info a{
+    text-transform: uppercase;
+    color: red;
+    background: white;
+    padding: 5px 10px;
+    border-radius: 13px;
+}
+
+.info a:hover{
+    background:red;
+    color: white;
+    text-decoration: none;
+}
+
+#login{
+    font-size: 20px;
+    float: right;
+    color: #fff;
+    background-color: #333;
+    padding: 3px 10px;
+    border: none;
+    margin-top: 10px;
+}
+#login:hover{
+    border-color: white;
+}
+.btn-msf{
+  color: #fff;
+  background-color: black;
+  border-color: white;
+  text-transform: uppercase;
+}
+
+.btn-msf:hover , .btn-msf:focus{
+  color: #fff;
+  background-color:#555555;
+}
+
+.btn-msf-contact{
+  color: #fff;
+  background-color: red;
+  border-color: white;
+  text-transform: uppercase;
+}
+
+.btn-msf-contact:hover , .btn-msf:focus{
+  color: #fff;
+  background-color:#550000;
+}
+
+
+.msflogo{
+  max-height: 25%;
+  height: 100px;
+  position: absolute;
+
+}

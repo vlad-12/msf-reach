@@ -1,0 +1,137 @@
+<style type="text/css">
+.category-of-emergency,
+.type-of-programmes,
+.operational-centers {
+  padding-left: 15px;
+}
+
+.type-of-emergency {
+  padding-left: 30px;
+}
+
+dd.padding-bottom {
+  padding-bottom: 5px;
+}
+
+.flex-text-wrap pre {
+  padding: 5px;
+}
+
+select.error,
+input.error,
+textarea.error {
+  border-color: red;
+  background: #FDD;
+}
+
+select.error:focus,
+input.error:focus,
+textarea.error:focus {
+  outline-color: #F99;
+}
+
+select.valid,
+input.valid,
+textarea.valid {
+  border-color: #5A5;
+  background: #EFE;
+}
+
+select.valid:focus,
+input.valid:focus,
+textarea.valid:focus {
+  outline-color: #8E8;
+}
+</style>
+<section id="archiveEventVue">
+  <form ref="archiveEventForm" method="put" id="archiveEventForm">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      <h4 class="modal-title" id="myModalLabel">Are you sure?</h4>
+    </div>
+    <div class="modal-body">
+      <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+        <div class="panel panel-default">
+          <div class="panel-heading" role="tab" id="headingSix">
+            <h4 class="panel-title">
+                MSF Response End Date
+            </h4>
+          </div>
+          <div id="collapseSix2" class="panel-collapse" role="tabpanel" aria-labelledby="headingSix">
+            <ul class="list-group">
+              <li class="list-group-item">
+                <div class="row">
+                  <div class="col-sm-6">
+                    <date-picker v-model="event.metadata.end_date_msf_response" :config="{format: 'YYYY-MM-DD'}" placeholder="End date"></date-picker>
+                  </div>
+                </div>
+              </li>
+            </ul>
+            <div class="panel-body">
+              <button type="submit" class="btn btn-danger pull-right">Close Event</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+<script type="text/javascript">
+Vue.component("date-picker", VueBootstrapDatetimePicker.default);
+
+
+Vue.filter('formatedNumber', function(value) {
+  return value.toString().replace(/,/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+});
+
+Vue.filter('relaceUnderscore', function(value) {
+  function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+  value = capitalizeFirstLetter(value);
+  value = value.replace(/__/g, "-");
+  return value.replace(/_/g, " ");
+});
+
+var vm = new Vue({
+  el: "#archiveEventVue",
+  data: {
+    statuses: statuses,
+    keyMSFFigures: keyMSFFigures,
+    event: $.extend(true, defaultEvent, currentEventProperties),
+    currentEventGeometry: currentEventGeometry,
+  },
+  mounted: function() {
+
+    this.event.metadata.event_status  = "complete";
+
+
+    var v = jQuery("#archiveEventForm").validate({
+      submitHandler: function(form) {
+        var metadata = vm.event.metadata;
+        metadata['event_datetime_closed']=moment().toISOString();
+
+        var body = {
+          status: "inactive",
+          type: currentEventProperties.type,
+          metadata: metadata
+        }
+        $.ajax({
+          type: "PUT",
+          url: "/api/events/" + currentEventId,
+          data: JSON.stringify(body),
+          contentType: 'application/json'
+        }).done(function(data, textStatus, req) {
+          window.location.href = '/';
+        }).fail(function(err) {
+          if (err.responseText.includes('expired')) {
+            alert("session expired");
+          } else {
+            alert('error: '+ err.responseText);
+          }
+        });
+      }
+    });
+  }
+});
+</script>
